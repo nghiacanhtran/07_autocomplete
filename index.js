@@ -1,7 +1,8 @@
-const autocompleteNtc = (function () {
+const autocompleteNtc = (function() {
   const global = {
     inputTarget: "",
     dataSource: [],
+    idContainer: "autocompleteNtc",
   };
 
   const setGlobalSetting = (settings) => {
@@ -12,11 +13,11 @@ const autocompleteNtc = (function () {
   const debounce = (func, wait) => {
     var timeout;
 
-    return function () {
+    return function() {
       var context = this,
         args = arguments;
 
-      var executeFunction = function () {
+      var executeFunction = function() {
         func.apply(context, args);
       };
 
@@ -29,13 +30,37 @@ const autocompleteNtc = (function () {
     return firstCharacter.trim();
   };
 
-  const execAutoComplete = (dataSource) => {};
+  const createNewContainer = () => {
+    const ul = document.createElement("ul");
+    ul.id = global.idContainer;
+    return ul;
+  };
+
+  const getContainerBuilder = () => {
+    const container = document.getElementById(global.idContainer);
+    const containerAutocomplete = container ? container : createNewContainer();
+    return (settings) => {
+      return containerAutocomplete;
+    };
+  };
+
+  const getHtmlBuilder = (dataSource) => {
+    dataSource.forEach((obj) => {
+      const liNode = document.createElement('li');
+      const textNode = document.createTextNode(`obj.text`);
+      liNode.appendChild(textNode)
+
+    }
+  };
+
+  const execAutoComplete = (dataSource) => { };
+
   const getSearchEngine = (dataSource) => {
     return (keyword) =>
       dataSource.filter((object) => object.text.includes(keyword));
   };
 
-  const execEventInput = (e) => {
+  const execEventKeyupInput = (e) => {
     const keyword = e.target.value;
     const keywordTrim = keyword.trim();
     const dataSource = global.dataSource;
@@ -43,7 +68,7 @@ const autocompleteNtc = (function () {
     const dataSourceFilter = searchEngine(keywordTrim);
   };
 
-  const handelEventKeyup = debounce(function (e) {
+  const handelEventKeyup = debounce(function(e) {
     const arrayArrowKey = [38, 40];
     !arrayArrowKey.includes(e.which) && execEventInput(e);
   }, 500);
@@ -52,7 +77,7 @@ const autocompleteNtc = (function () {
     console.log(e);
   };
 
-  const handelEventId = (inputTarget, eventName) => {
+  const handelEventIdSelector = (inputTarget, eventName) => {
     const el = document.querySelector(inputTarget);
     const eventAction = new Map([
       ["keyup", handelEventKeyup],
@@ -61,12 +86,13 @@ const autocompleteNtc = (function () {
     el.addEventListener(eventName, eventAction.get(eventName));
   };
 
-  const handelEventClass = (inputTarget, eventName) => {};
+  const handelEventClassSelector = (inputTarget, eventName) => { };
+
   const getProcessorRegisterEvent = (inputTarget) => {
     const firstCharacter = getFirstCharacter(inputTarget);
     const actionProcess = new Map([
-      [".", handelEventClass],
-      ["#", handelEventId],
+      [".", handelEventClassSelector],
+      ["#", handelEventIdSelector],
     ]);
     return (eventName) => {
       actionProcess.get(firstCharacter).apply(this, [inputTarget, eventName]);
