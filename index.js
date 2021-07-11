@@ -10,6 +10,8 @@ const autocompleteNtc = (function() {
     global.dataSource = settings.dataSource;
   };
 
+  const compose = (...functions) => args => functions.reduceRight((arg, fn) => fn(arg), args);
+
   const debounce = (func, wait) => {
     var timeout;
 
@@ -25,6 +27,7 @@ const autocompleteNtc = (function() {
       timeout = setTimeout(executeFunction, wait);
     };
   };
+
   const getFirstCharacter = (inputTarget) => {
     const firstCharacter = inputTarget.charAt(0) || "";
     return firstCharacter.trim();
@@ -36,24 +39,40 @@ const autocompleteNtc = (function() {
     return ul;
   };
 
-  const getContainerBuilder = () => {
+  const getContainerAutoComplete = (settings) => {
     const container = document.getElementById(global.idContainer);
     const containerAutocomplete = container ? container : createNewContainer();
-    return (settings) => {
-      return containerAutocomplete;
-    };
+    container.style.listStyle = 'none';
+    container.style.width='300px';
+    container.style.border = '1px solid #ccc';
+    container.style.position = 'relative';
+    container.style.padding = '5px 10px';
+    container.style.overflow = 'auto';
+    container.style.height = '150px';
+    container.style.borderRadius = '4px';
+    return containerAutocomplete;
   };
 
-  const getHtmlBuilder = (dataSource) => {
-    dataSource.forEach((obj) => {
+  const getBuilderHtmlContent = (dataSource) => {
+    const arrLiNode = dataSource.map((object) => {
       const liNode = document.createElement('li');
-      const textNode = document.createTextNode(`obj.text`);
-      liNode.appendChild(textNode)
+      const textNode = document.createTextNode(`${object.text}`);
+      liNode.appendChild(textNode);
+      return liNode;
+    });
 
+    return (container) => {
+      arrLiNode.forEach((liNode) => {
+        container.appendChild(liNode);
+      });
+      return container;
     }
   };
 
-  const execAutoComplete = (dataSource) => { };
+  const appendToScreen = (container) => {
+    document.body.appendChild(container);
+  };
+
 
   const getSearchEngine = (dataSource) => {
     return (keyword) =>
@@ -66,11 +85,15 @@ const autocompleteNtc = (function() {
     const dataSource = global.dataSource;
     const searchEngine = getSearchEngine(dataSource);
     const dataSourceFilter = searchEngine(keywordTrim);
+    const htmlContentBuilder = getBuilderHtmlContent(dataSourceFilter);
+    const autoCompleteBuilder = compose(appendToScreen,htmlContentBuilder,getContainerAutoComplete);
+    autoCompleteBuilder({
+    });
   };
 
   const handelEventKeyup = debounce(function(e) {
     const arrayArrowKey = [38, 40];
-    !arrayArrowKey.includes(e.which) && execEventInput(e);
+    !arrayArrowKey.includes(e.which) && execEventKeyupInput(e);
   }, 500);
 
   const handleEventBlur = (e) => {
