@@ -42,29 +42,39 @@ const autocompleteNtc = (function() {
   const getContainerAutoComplete = (settings) => {
     const container = document.getElementById(global.idContainer);
     const containerAutocomplete = container ? container : createNewContainer();
-    container.style.listStyle = 'none';
-    container.style.width='300px';
-    container.style.border = '1px solid #ccc';
-    container.style.position = 'relative';
-    container.style.padding = '5px 10px';
-    container.style.overflow = 'auto';
-    container.style.height = '150px';
-    container.style.borderRadius = '4px';
+
+    containerAutocomplete.innerHTML = '';
+    containerAutocomplete.style.listStyle = 'none';
+    containerAutocomplete.style.width = '300px';
+    containerAutocomplete.style.border = '1px solid #ccc';
+    containerAutocomplete.style.position = 'relative';
+    containerAutocomplete.style.padding = '5px';
+    containerAutocomplete.style.overflow = 'auto';
+    containerAutocomplete.style.height = 'auto';
+    containerAutocomplete.style.maxHeight = '150px';
+    containerAutocomplete.style.borderRadius = '4px';
+
     return containerAutocomplete;
   };
 
-  const getBuilderHtmlContent = (dataSource) => {
-    const arrLiNode = dataSource.map((object) => {
-      const liNode = document.createElement('li');
-      const textNode = document.createTextNode(`${object.text}`);
-      liNode.appendChild(textNode);
-      return liNode;
-    });
+  const setLiNodeStyle = (liNode) => {
+    liNode.style.padding = "5px";
+    liNode.style.borderBottom = "1px solid #ccc"
+    liNode.style.cursor = "pointer";
+    return liNode;
+  }
 
+  const createLiNode = (object) => {
+    const liNode = document.createElement('li');
+    const textNode = document.createTextNode(`${object.text}`);
+    liNode.appendChild(textNode);
+    return liNode;
+  }
+
+  const getProcessorCreateContent = (dataSource) => {
+    const arrLiNode = dataSource.map(object => createLiNode(object)); 
     return (container) => {
-      arrLiNode.forEach((liNode) => {
-        container.appendChild(liNode);
-      });
+      arrLiNode.forEach((liNode) => container.appendChild(setLiNodeStyle(liNode)));
       return container;
     }
   };
@@ -72,7 +82,6 @@ const autocompleteNtc = (function() {
   const appendToScreen = (container) => {
     document.body.appendChild(container);
   };
-
 
   const getSearchEngine = (dataSource) => {
     return (keyword) =>
@@ -85,8 +94,8 @@ const autocompleteNtc = (function() {
     const dataSource = global.dataSource;
     const searchEngine = getSearchEngine(dataSource);
     const dataSourceFilter = searchEngine(keywordTrim);
-    const htmlContentBuilder = getBuilderHtmlContent(dataSourceFilter);
-    const autoCompleteBuilder = compose(appendToScreen,htmlContentBuilder,getContainerAutoComplete);
+    const addContentToContainer = getProcessorCreateContent(dataSourceFilter);
+    const autoCompleteBuilder = compose(appendToScreen, addContentToContainer, getContainerAutoComplete);
     autoCompleteBuilder({
     });
   };
