@@ -3,6 +3,7 @@ const autocompleteNtc = (function() {
     inputTarget: "",
     dataSource: [],
     idContainer: "autocompleteNtc",
+    classContainer: "ntc-autocomplete"
   };
 
   const setGlobalSetting = (settings) => {
@@ -28,60 +29,64 @@ const autocompleteNtc = (function() {
     };
   };
 
-  const getFirstCharacter = (inputTarget) => {
-    const firstCharacter = inputTarget.charAt(0) || "";
-    return firstCharacter.trim();
-  };
 
   const createNewContainer = () => {
     const ul = document.createElement("ul");
     ul.id = global.idContainer;
+    ul.setAttribute("class", global.classContainer);
     return ul;
   };
 
-  const getContainerAutoComplete = (settings) => {
+  const setPosition = (settings) => {
+    return (component) => {
+      component.style.top = settings.top;
+      component.style.left = settings.left;
+    }
+  }
+
+  const getContainerAutoComplete = () => {
     const container = document.getElementById(global.idContainer);
     const containerAutocomplete = container ? container : createNewContainer();
-
     containerAutocomplete.innerHTML = '';
-    containerAutocomplete.style.listStyle = 'none';
-    containerAutocomplete.style.width = '300px';
-    containerAutocomplete.style.border = '1px solid #ccc';
-    containerAutocomplete.style.position = 'relative';
-    containerAutocomplete.style.padding = '5px';
-    containerAutocomplete.style.overflow = 'auto';
-    containerAutocomplete.style.height = 'auto';
-    containerAutocomplete.style.maxHeight = '150px';
-    containerAutocomplete.style.borderRadius = '4px';
 
     return containerAutocomplete;
   };
 
-  const setLiNodeStyle = (liNode) => {
-    liNode.style.padding = "5px";
-    liNode.style.borderBottom = "1px solid #ccc"
-    liNode.style.cursor = "pointer";
+  const handleMouseOverLiNode = (e) => {
+    const container = e.target.closest('ul');
+    const liSelected = container.querySelectorAll('li.selected')[0] || undefined;
+    liSelected && liSelected.classList.remove('selected');
+    e.target.classList.add('selected');
+  }
+
+  const handleClickEventLiNode = (e) => {
+    const value = e.target.getAttribute('data-value');
+    
+  }
+
+  const registerEventLi = (liNode) => {
+    liNode.addEventListener('mouseover',handleMouseOverLiNode);
     return liNode;
   }
 
   const createLiNode = (object) => {
     const liNode = document.createElement('li');
+    liNode.setAttribute('data-val',object.value);
     const textNode = document.createTextNode(`${object.text}`);
     liNode.appendChild(textNode);
     return liNode;
   }
 
-  const getProcessorCreateContent = (dataSource) => {
-    const arrLiNode = dataSource.map(object => createLiNode(object)); 
-    return (container) => {
-      arrLiNode.forEach((liNode) => container.appendChild(setLiNodeStyle(liNode)));
-      return container;
-    }
-  };
+  const getBuilderContent = (dataSource) => dataSource.map((object) => registerEventLi(createLiNode(object)));
 
-  const appendToScreen = (container) => {
-    document.body.appendChild(container);
-  };
+  const appendToScreen = (container) => document.body.appendChild(container);
+
+  const appendToElement = (parent) => {
+    return (arrChild) => {
+      arrChild.map((childNode) => parent.appendChild(childNode));
+      return parent;
+    }
+  }
 
   const getSearchEngine = (dataSource) => {
     return (keyword) =>
@@ -90,14 +95,12 @@ const autocompleteNtc = (function() {
 
   const execEventKeyupInput = (e) => {
     const keyword = e.target.value;
-    const keywordTrim = keyword.trim();
-    const dataSource = global.dataSource;
-    const searchEngine = getSearchEngine(dataSource);
-    const dataSourceFilter = searchEngine(keywordTrim);
-    const addContentToContainer = getProcessorCreateContent(dataSourceFilter);
-    const autoCompleteBuilder = compose(appendToScreen, addContentToContainer, getContainerAutoComplete);
-    autoCompleteBuilder({
-    });
+    const searchEngine = getSearchEngine(global.dataSource);
+    const dataSourceFilter = searchEngine(keyword.trim());
+    const container = getContainerAutoComplete();
+    const content = getBuilderContent(dataSourceFilter);
+
+    appendToScreen(appendToElement(container)(content));
   };
 
   const handelEventKeyup = debounce(function(e) {
@@ -109,37 +112,18 @@ const autocompleteNtc = (function() {
     console.log(e);
   };
 
-  const handelEventIdSelector = (inputTarget, eventName) => {
-    const el = document.querySelector(inputTarget);
-    const eventAction = new Map([
-      ["keyup", handelEventKeyup],
-      ["blur", handleEventBlur],
-    ]);
-    el.addEventListener(eventName, eventAction.get(eventName));
-  };
+  const registerEventForInput = (inputTarget) => {
+    const arrEl = Array.from(document.querySelectorAll(inputTarget));
 
-  const handelEventClassSelector = (inputTarget, eventName) => { };
-
-  const getProcessorRegisterEvent = (inputTarget) => {
-    const firstCharacter = getFirstCharacter(inputTarget);
-    const actionProcess = new Map([
-      [".", handelEventClassSelector],
-      ["#", handelEventIdSelector],
-    ]);
-    return (eventName) => {
-      actionProcess.get(firstCharacter).apply(this, [inputTarget, eventName]);
-    };
-  };
-
-  const createEngineRegisterEvent = (inputTarget) => {
-    const processorRegisterEvent = getProcessorRegisterEvent(inputTarget);
-    const eventArray = ["keyup", "blur"];
-    eventArray.forEach((event) => processorRegisterEvent(event));
+    arrEl.forEach((node) => {
+      node.addEventListener("keyup", handelEventKeyup);
+      node.addEventListener("blur", handleEventBlur);
+    });
   };
 
   const init = (settings) => {
     setGlobalSetting(settings);
-    createEngineRegisterEvent(global.inputTarget);
+    registerEventForInput(global.inputTarget);
   };
 
   return {

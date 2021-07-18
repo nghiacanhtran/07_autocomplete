@@ -1,0 +1,28 @@
+.ntc-autocomplete {
+  list-style: outside none none;
+  width: 300px;
+  border: 1px solid rgb(204, 204, 204);
+  position: relative;
+  padding: 5px;
+  overflow: auto;
+  height: auto;
+  max-height: 150px;
+  border-radius: 4px;
+}
+
+.ntc-autocomplete li{
+  padding: 5px;
+  border-bottom: 1px solid rgb(204, 204, 204);
+  cursor: pointer;
+}
+
+.ntc-autocomplete li:last-child {
+  border-bottom : none;
+}
+
+.ntc-autocomplete li.selected {
+  color: #735b5b;
+  background: #ccc
+}
+
+
