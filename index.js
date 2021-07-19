@@ -39,8 +39,9 @@ const autocompleteNtc = (function() {
 
   const setPosition = (settings) => {
     return (component) => {
-      component.style.top = settings.top;
-      component.style.left = settings.left;
+      component.style.top = `${settings.top}px`;
+      component.style.left = `${settings.left}px`;
+      return component;
     }
   }
 
@@ -94,13 +95,15 @@ const autocompleteNtc = (function() {
   };
 
   const execEventKeyupInput = (e) => {
-    const keyword = e.target.value;
+    const el = e.target;
+    const keyword = el.value;
+    const elHeight = el.clientHeight;
+
     const searchEngine = getSearchEngine(global.dataSource);
     const dataSourceFilter = searchEngine(keyword.trim());
-    const container = getContainerAutoComplete();
+    const container = compose(setPosition({top: elHeight + el.offsetTop,left: el.offsetLeft}), getContainerAutoComplete);
     const content = getBuilderContent(dataSourceFilter);
-
-    appendToScreen(appendToElement(container)(content));
+    appendToScreen(appendToElement(container())(content));
   };
 
   const handelEventKeyup = debounce(function(e) {
@@ -109,13 +112,14 @@ const autocompleteNtc = (function() {
   }, 500);
 
   const handleEventBlur = (e) => {
-    console.log(e);
+     
   };
 
   const registerEventForInput = (inputTarget) => {
     const arrEl = Array.from(document.querySelectorAll(inputTarget));
 
-    arrEl.forEach((node) => {
+    arrEl.forEach((node,index) => {
+      node.setAttribute("data-number",index);
       node.addEventListener("keyup", handelEventKeyup);
       node.addEventListener("blur", handleEventBlur);
     });
