@@ -66,8 +66,10 @@ const autocompleteNtc = (function() {
   }
 
   const registerEventLi = (liNode) => {
+    return () => {
     liNode.addEventListener('mouseover',handleMouseOverLiNode);
     return liNode;
+    }
   }
 
   const createLiNode = (object) => {
@@ -118,8 +120,7 @@ const autocompleteNtc = (function() {
   const registerEventForInput = (inputTarget) => {
     const arrEl = Array.from(document.querySelectorAll(inputTarget));
 
-    arrEl.forEach((node,index) => {
-      node.setAttribute("data-number",index);
+    arrEl.forEach((node) => {
       node.addEventListener("keyup", handelEventKeyup);
       node.addEventListener("blur", handleEventBlur);
     });
