@@ -1,9 +1,16 @@
-const autocompleteNtc = (function() {
+const autocompleteNtc = (function () {
   const global = {
     inputTarget: "",
     dataSource: [],
     idContainer: "autocompleteNtc",
-    classContainer: "ntc-autocomplete"
+    classContainer: "ntc-autocomplete",
+    classActive: "selected",
+  };
+
+  const init = (settings) => {
+    setGlobalSetting(settings);
+    registerEventForInput(global.inputTarget);
+    navigateContent();
   };
 
   const setGlobalSetting = (settings) => {
@@ -11,16 +18,19 @@ const autocompleteNtc = (function() {
     global.dataSource = settings.dataSource;
   };
 
-  const compose = (...functions) => args => functions.reduceRight((arg, fn) => fn(arg), args);
+  const compose =
+    (...functions) =>
+    (args) =>
+      functions.reduceRight((arg, fn) => fn(arg), args);
 
   const debounce = (func, wait) => {
     var timeout;
 
-    return function() {
+    return function () {
       var context = this,
         args = arguments;
 
-      var executeFunction = function() {
+      var executeFunction = function () {
         func.apply(context, args);
       };
 
@@ -28,7 +38,6 @@ const autocompleteNtc = (function() {
       timeout = setTimeout(executeFunction, wait);
     };
   };
-
 
   const createNewContainer = () => {
     const ul = document.createElement("ul");
@@ -42,43 +51,66 @@ const autocompleteNtc = (function() {
       component.style.top = `${settings.top}px`;
       component.style.left = `${settings.left}px`;
       return component;
-    }
-  }
+    };
+  };
 
   const getContainerAutoComplete = () => {
     const container = document.getElementById(global.idContainer);
     const containerAutocomplete = container ? container : createNewContainer();
-    containerAutocomplete.innerHTML = '';
+    containerAutocomplete.innerHTML = "";
 
     return containerAutocomplete;
   };
 
+  const setActive = (node) => node.classList.add(global.classActive);
+  const removeAllActive = (container) => {
+    const liSelected =
+      container.querySelectorAll("li.selected")[0] || undefined;
+    liSelected && liSelected.classList.remove("selected");
+  };
+
+  const findNodeActive = (arrNode) =>
+    arrNode.find((node) => node.classList.contains(global.classActive));
+
   const handleMouseOverLiNode = (e) => {
-    const container = e.target.closest('ul');
-    const liSelected = container.querySelectorAll('li.selected')[0] || undefined;
-    liSelected && liSelected.classList.remove('selected');
-    e.target.classList.add('selected');
-  }
+    const container = e.target.closest("ul");
+    removeAllActive(container);
+    setActive(e.target);
+  };
 
-  const handleClickEventLiNode = (e) => {
-    const value = e.target.getAttribute('data-value');
-    
-  }
+  const setValueToInput = (input) => (value) => {
+    input.value = value;
+    return input;
+  };
 
-  const registerEventLi = (liNode) => {
-    liNode.addEventListener('mouseover',handleMouseOverLiNode);
-    return liNode;
-  }
+  const handleClickEventLiNode = (inputTarget) => {
+    return (e) => {
+      const liNode = e.target;
+      const textDisplay = liNode.textContent;
+      setValueToInput(inputTarget)(textDisplay);
+    };
+  };
+
+  const registerEventLi = (inputTarget) => {
+    return (liNode) => {
+      liNode.addEventListener("mouseover", handleMouseOverLiNode);
+      liNode.addEventListener("click", handleClickEventLiNode(inputTarget));
+      return liNode;
+    };
+  };
 
   const createLiNode = (object) => {
-    const liNode = document.createElement('li');
-    liNode.setAttribute('data-val',object.value);
+    const liNode = document.createElement("li");
+    liNode.setAttribute("data-val", object.value);
     const textNode = document.createTextNode(`${object.text}`);
     liNode.appendChild(textNode);
     return liNode;
-  }
+  };
 
-  const getBuilderContent = (dataSource) => dataSource.map((object) => registerEventLi(createLiNode(object)));
+  const getBuilderContent = (inputTarget) => (dataSource) =>
+    dataSource.map((object) =>
+      registerEventLi(inputTarget)(createLiNode(object))
+    );
 
   const appendToScreen = (container) => document.body.appendChild(container);
 
@@ -86,8 +118,8 @@ const autocompleteNtc = (function() {
     return (arrChild) => {
       arrChild.map((childNode) => parent.appendChild(childNode));
       return parent;
-    }
-  }
+    };
+  };
 
   const getSearchEngine = (dataSource) => {
     return (keyword) =>
@@ -101,35 +133,61 @@ const autocompleteNtc = (function() {
 
     const searchEngine = getSearchEngine(global.dataSource);
     const dataSourceFilter = searchEngine(keyword.trim());
-    const container = compose(setPosition({top: elHeight + el.offsetTop,left: el.offsetLeft}), getContainerAutoComplete);
-    const content = getBuilderContent(dataSourceFilter);
-    appendToScreen(appendToElement(container())(content));
+    const container = compose(
+      setPosition({ top: elHeight + el.offsetTop, left: el.offsetLeft }),
+      getContainerAutoComplete
+    );
+    const content = getBuilderContent(e.target)(dataSourceFilter);
+    const showSuggest = compose(appendToScreen, appendToElement(container()));
+    showSuggest(content);
   };
 
-  const handelEventKeyup = debounce(function(e) {
+  const handelEventKeyup = debounce(function (e) {
     const arrayArrowKey = [38, 40];
     !arrayArrowKey.includes(e.which) && execEventKeyupInput(e);
   }, 500);
 
-  const handleEventBlur = (e) => {
-     
-  };
+  const handleEventBlur = (e) => {};
 
   const registerEventForInput = (inputTarget) => {
     const arrEl = Array.from(document.querySelectorAll(inputTarget));
 
-    arrEl.forEach((node,index) => {
-      node.setAttribute("data-number",index);
+    arrEl.forEach((node) => {
       node.addEventListener("keyup", handelEventKeyup);
       node.addEventListener("blur", handleEventBlur);
     });
   };
 
-  const init = (settings) => {
-    setGlobalSetting(settings);
-    registerEventForInput(global.inputTarget);
+  const gotoUp = (container) => {
+    const arrNode = Array.from(container.querySelectorAll("li"));
+    const nodeActive = findNodeActive(arrNode) || arrNode[0];
+    const previousNode = nodeActive.previousElementSibling || arrNode[0];
+    removeAllActive(container);
+    setActive(previousNode);
   };
 
+  const gotoDown = (container) => {
+    const arrNode = Array.from(container.querySelectorAll("li"));
+    const nodeActive = findNodeActive(arrNode) || arrNode[0];
+    const nextNode = nodeActive.nextElementSibling || arrNode[0];
+    removeAllActive(container);
+    setActive(nextNode);
+  };
+
+  const navigateContent = () => {
+    document.addEventListener("keydown", function (e) {
+      const actions = {
+        38: gotoUp,
+        40: gotoDown,
+      };
+
+      actions[e.which] &&
+        actions[e.which].call(
+          this,
+          document.getElementById(global.idContainer)
+        );
+    });
+  };
   return {
     init: init,
   };
