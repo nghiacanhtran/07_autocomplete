@@ -1,4 +1,4 @@
-const autocompleteNtc = (function() {
+const autocompleteNtc = (function () {
   const global = {
     inputTarget: "",
     dataSource: [],
@@ -7,10 +7,22 @@ const autocompleteNtc = (function() {
     classActive: "selected",
   };
 
+  const removeVietnamese = (str) => {
+    const strClone = str;
+    const strLowCase = strClone.toLowerCase();
+    const strA = strLowCase.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+    const strE = strA.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+    const strI = strE.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+    const strO = strI.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+    strClone = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+    strClone = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+    strClone = str.replace(/đ/g, "d");
+    return strClone;
+  };
+
   const init = (settings) => {
     setGlobalSetting(settings);
     registerEventForInput(global.inputTarget);
-    navigateContent();
   };
 
   const setGlobalSetting = (settings) => {
@@ -20,17 +32,17 @@ const autocompleteNtc = (function() {
 
   const compose =
     (...functions) =>
-      (args) =>
-        functions.reduceRight((arg, fn) => fn(arg), args);
+    (args) =>
+      functions.reduceRight((arg, fn) => fn(arg), args);
 
   const debounce = (func, wait) => {
     var timeout;
 
-    return function() {
+    return function () {
       var context = this,
         args = arguments;
 
-      var executeFunction = function() {
+      var executeFunction = function () {
         func.apply(context, args);
       };
 
@@ -39,7 +51,9 @@ const autocompleteNtc = (function() {
     };
   };
 
-  const findIndex = (arrNode) => node => arrNode.indexOf(node);
+  const findIndex = (arrNode) => (node) => arrNode.indexOf(node);
+
+  const scrollTopEl = (position) => (element) => (element.scrollTop = position);
 
   const createNewContainer = () => {
     const ul = document.createElement("ul");
@@ -56,13 +70,6 @@ const autocompleteNtc = (function() {
     };
   };
 
-  const setAnimate = (settings) => {
-    return (node) => {
-      node.style.transition = 'all ' + 500;
-      Object.keys(settings).forEach(key => node.style[key] = settings[key]);
-      return node;
-    }
-  }
   const getContainerAutoComplete = () => {
     const container = document.getElementById(global.idContainer);
     const containerAutocomplete = container ? container : createNewContainer();
@@ -71,13 +78,33 @@ const autocompleteNtc = (function() {
     return containerAutocomplete;
   };
 
-  const setActive = (node) => { node.classList.add(global.classActive); return node };
+  const setActive = (node) => {
+    node.classList.add(global.classActive);
+    return node;
+  };
 
   const removeAllActive = (container) => {
     const liSelected =
       container.querySelectorAll("li.selected")[0] || undefined;
     liSelected && liSelected.classList.remove("selected");
   };
+
+  const emptyContentNode = (node) => {
+    node.innerHTML = "";
+    return node;
+  };
+
+  const hiddenElNode = (node) => {
+    node.style.display = "none";
+    return node;
+  };
+
+  const showElNode = (node) => {
+    node.style.display = "block";
+    return node;
+  };
+
+  const lowerString = (string) => string.toLowerCase();
 
   const findNodeActive = (arrNode) =>
     arrNode.find((node) => node.classList.contains(global.classActive));
@@ -122,7 +149,10 @@ const autocompleteNtc = (function() {
       registerEventLi(inputTarget)(createLiNode(object))
     );
 
-  const appendToScreen = (container) => document.body.appendChild(container);
+  const appendToScreen = (container) => {
+    document.body.appendChild(container);
+    return container;
+  };
 
   const appendToElement = (parent) => {
     return (arrChild) => {
@@ -138,7 +168,7 @@ const autocompleteNtc = (function() {
 
   const execEventKeyupInput = (e) => {
     const el = e.target;
-    const keyword = el.value;
+    const keyword = lowerString(el.value);
     const elHeight = el.clientHeight;
 
     const searchEngine = getSearchEngine(global.dataSource);
@@ -149,15 +179,23 @@ const autocompleteNtc = (function() {
     );
     const content = getBuilderContent(e.target)(dataSourceFilter);
     const showSuggest = compose(appendToScreen, appendToElement(container()));
-    showSuggest(content);
+    showElNode(showSuggest(content));
   };
 
-  const handelEventKeyup = debounce(function(e) {
-    const arrayArrowKey = [38, 40];
+  const handelEventKeyup = debounce(function (e) {
+    const arrayArrowKey = [13, 38, 40];
     !arrayArrowKey.includes(e.which) && execEventKeyupInput(e);
+    return false;
   }, 500);
 
-  const handleEventBlur = (e) => { };
+  const handleEventBlur = (e) => {
+    const inputTarget = e.target;
+    const containerAutocomplete = document.getElementById(global.idContainer);
+    const arrNode = Array.from(containerAutocomplete.querySelectorAll("li"));
+    const nodeActive = findNodeActive(arrNode);
+    nodeActive && setValueToInput(inputTarget)(nodeActive.textContent);
+    hiddenElNode(emptyContentNode(containerAutocomplete));
+  };
 
   const registerEventForInput = (inputTarget) => {
     const arrEl = Array.from(document.querySelectorAll(inputTarget));
@@ -165,54 +203,63 @@ const autocompleteNtc = (function() {
     arrEl.forEach((node) => {
       node.addEventListener("keyup", handelEventKeyup);
       node.addEventListener("blur", handleEventBlur);
+      node.addEventListener("keydown", handleEventKeydown);
     });
   };
 
-  const navigateContent = () => {
-    document.addEventListener("keydown", function(e) {
-      const actions = {
-        38: gotoUp,
-        40: gotoDown,
-      };
+  const handleEventKeydown = (e) => {
+    const actions = {
+      38: gotoUp(e.target),
+      40: gotoDown(e.target),
+      13: () => {
+        handleEventBlur(e);
+      },
+    };
 
-      actions[e.which] &&
-        actions[e.which].call(
-          this,
-          document.getElementById(global.idContainer)
-        );
-    });
+    actions[e.which] &&
+      actions[e.which].call(this, document.getElementById(global.idContainer));
   };
 
-  const gotoUp = (container) => {
-    const arrNode = Array.from(container.querySelectorAll("li"));
-    const nodeActive = findNodeActive(arrNode) || arrNode[0];
-    const previousNode = nodeActive.previousElementSibling || arrNode[0];
-    removeAllActive(container);
-    getScroll(container)(setActive(previousNode));
+  const gotoUp = (inputTarget) => {
+    return (container) => {
+      const arrNode = Array.from(container.querySelectorAll("li"));
+      const nodeActive = findNodeActive(arrNode) || arrNode[0];
+      const previousNode = nodeActive.previousElementSibling || arrNode[0];
+      removeAllActive(container);
+      getScroll(container)(setActive(previousNode));
+      setValueToInput(inputTarget)(previousNode.textContent);
+    };
   };
 
+  const gotoDown = (inputTarget) => {
+    return (container) => {
+      const arrNode = Array.from(container.querySelectorAll("li"));
+      const nodeActive = findNodeActive(arrNode);
+      const nextNode =
+        (nodeActive && nodeActive.nextElementSibling) || arrNode[0];
 
-  const gotoDown = (container) => {
-    const arrNode = Array.from(container.querySelectorAll("li"));
-    const nodeActive = findNodeActive(arrNode);
-    const nextNode = nodeActive && nodeActive.nextElementSibling || arrNode[0];
-    removeAllActive(container);
-    getScroll(container)(setActive(nextNode));
+      removeAllActive(container);
+      getScroll(container)(setActive(nextNode));
+      setValueToInput(inputTarget)(nextNode.textContent);
+    };
   };
 
   const getScroll = (container) => {
     return (nodeActive) => {
-      const scrollTop = container.scrollTop;
+      const scrollTopPosition = container.scrollTop;
       const nodeActiveHeight = nodeActive.clientHeight;
-      const viewPortSize = scrollTop + container.clientHeight;
-      debugger;
-      const indexNode = findIndex(Array.from(container.querySelectorAll('li'))(nodeActive));
+      const viewPortSize = scrollTopPosition + container.clientHeight;
+      const arrNode = Array.from(container.querySelectorAll("li"));
+      const indexNode = findIndex(arrNode)(nodeActive);
       const nodeOffset = nodeActiveHeight * indexNode;
-      nodeOffset < scrollTop || nodeOffset + nodeActiveHeight > viewPortSize && setAnimate({ scrollTop: itemOffset })(container);
-    }
-  }
+
+      (nodeOffset < scrollTopPosition ||
+        nodeOffset + nodeActiveHeight > viewPortSize) &&
+        scrollTopEl(nodeOffset)(container);
+    };
+  };
+
   return {
     init: init,
   };
 })();
-
