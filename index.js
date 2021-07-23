@@ -1,48 +1,50 @@
-const autocompleteNtc = (function () {
+const autocompleteNtc = (function() {
   const global = {
-    inputTarget: "",
+    inputTarget: '',
     dataSource: [],
-    idContainer: "autocompleteNtc",
-    classContainer: "ntc-autocomplete",
-    classActive: "selected",
+    idContainer: 'autocompleteNtc',
+    classContainer: 'ntc-autocomplete',
+    classActive: 'selected',
+    textDisplay: ''
   };
 
-  const removeVietnamese = (str) => {
-    const strClone = str;
-    const strLowCase = strClone.toLowerCase();
-    const strA = strLowCase.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
-    const strE = strA.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
-    const strI = strE.replace(/ì|í|ị|ỉ|ĩ/g, "i");
-    const strO = strI.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
-    strClone = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
-    strClone = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
-    strClone = str.replace(/đ/g, "d");
-    return strClone;
-  };
 
   const init = (settings) => {
     setGlobalSetting(settings);
     registerEventForInput(global.inputTarget);
   };
 
+  const removeVietnamese = (str) => {
+    const strLowCase = str.toLowerCase();
+    const strA = strLowCase.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, "a");
+    const strE = strA.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, "e");
+    const strI = strE.replace(/ì|í|ị|ỉ|ĩ/g, "i");
+    const strO = strI.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, "o");
+    const strU = strO.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, "u");
+    const strY = strU.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, "y");
+    const strD = strY.replace(/đ/g, "d");
+    return strD;
+  };
+
   const setGlobalSetting = (settings) => {
     global.inputTarget = settings.inputTarget;
     global.dataSource = settings.dataSource;
+    global.textDisplay = settings.textDisplay;
   };
 
   const compose =
     (...functions) =>
-    (args) =>
-      functions.reduceRight((arg, fn) => fn(arg), args);
+      (args) =>
+        functions.reduceRight((arg, fn) => fn(arg), args);
 
   const debounce = (func, wait) => {
     var timeout;
 
-    return function () {
+    return function() {
       var context = this,
         args = arguments;
 
-      var executeFunction = function () {
+      var executeFunction = function() {
         func.apply(context, args);
       };
 
@@ -123,8 +125,7 @@ const autocompleteNtc = (function () {
   const handleClickEventLiNode = (inputTarget) => {
     return (e) => {
       const liNode = e.target;
-      const textDisplay = liNode.textContent;
-      setValueToInput(inputTarget)(textDisplay);
+      setValueToInput(inputTarget)(getValueDislay(liNode));
     };
   };
 
@@ -162,13 +163,18 @@ const autocompleteNtc = (function () {
   };
 
   const getSearchEngine = (dataSource) => {
-    return (keyword) =>
-      dataSource.filter((object) => object.text.includes(keyword));
+    return (keyword) => {
+      const arrItemFilterText = dataSource.filter((object) => object.text.includes(keyword));
+      const arrItemFilterValue = dataSource.filter(object => object.value.includes(keyword));
+      const arrNew = arrItemFilterText.concat(arrItemFilterValue);
+      const arrSource = arrNew.reduce((arrS, current) => {
+      }, []);
+    }
   };
 
   const execEventKeyupInput = (e) => {
     const el = e.target;
-    const keyword = lowerString(el.value);
+    const keyword = removeVietnamese(lowerString(el.value));
     const elHeight = el.clientHeight;
 
     const searchEngine = getSearchEngine(global.dataSource);
@@ -182,18 +188,20 @@ const autocompleteNtc = (function () {
     showElNode(showSuggest(content));
   };
 
-  const handelEventKeyup = debounce(function (e) {
+  const handelEventKeyup = debounce(function(e) {
     const arrayArrowKey = [13, 38, 40];
     !arrayArrowKey.includes(e.which) && execEventKeyupInput(e);
     return false;
   }, 500);
+
+  const getValueDislay = (node) => global.textDisplay === 'value' ? node.getAttribute('data-val') : node.textContent;
 
   const handleEventBlur = (e) => {
     const inputTarget = e.target;
     const containerAutocomplete = document.getElementById(global.idContainer);
     const arrNode = Array.from(containerAutocomplete.querySelectorAll("li"));
     const nodeActive = findNodeActive(arrNode);
-    nodeActive && setValueToInput(inputTarget)(nodeActive.textContent);
+    nodeActive && setValueToInput(inputTarget)(getValueDislay(nodeActive));
     hiddenElNode(emptyContentNode(containerAutocomplete));
   };
 
@@ -216,8 +224,9 @@ const autocompleteNtc = (function () {
       },
     };
 
-    actions[e.which] &&
-      actions[e.which].call(this, document.getElementById(global.idContainer));
+    const container = document.getElementById(global.idContainer);
+    container && actions[e.which] &&
+      actions[e.which].call(this, container);
   };
 
   const gotoUp = (inputTarget) => {
@@ -227,7 +236,7 @@ const autocompleteNtc = (function () {
       const previousNode = nodeActive.previousElementSibling || arrNode[0];
       removeAllActive(container);
       getScroll(container)(setActive(previousNode));
-      setValueToInput(inputTarget)(previousNode.textContent);
+      setValueToInput(inputTarget)(getValueDislay(previousNode));
     };
   };
 
@@ -240,7 +249,7 @@ const autocompleteNtc = (function () {
 
       removeAllActive(container);
       getScroll(container)(setActive(nextNode));
-      setValueToInput(inputTarget)(nextNode.textContent);
+      setValueToInput(inputTarget)(getValueDislay(nextNode));
     };
   };
 
