@@ -167,8 +167,7 @@ const autocompleteNtc = (function() {
       const arrItemFilterText = dataSource.filter((object) => object.text.includes(keyword));
       const arrItemFilterValue = dataSource.filter(object => object.value.includes(keyword));
       const arrNew = arrItemFilterText.concat(arrItemFilterValue);
-      const arrSource = arrNew.reduce((arrS, current) => {
-      }, []);
+      return arrNew.filter((val, index, arr) => arr.findIndex(t => (t.text === val.text && t.value === val.value)) === index);
     }
   };
 
