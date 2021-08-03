@@ -11,142 +11,67 @@
  * })
  * **/
 const autoCompleteGrid = (function () {
-    let globalObject = {
-        config: {},
+    let globalSettings = {
+        idGrid: '',
+        dataSource: {},
         arrayKeyName: [],
+        idContainer: 'autocompleteNtc',
+        classContainer: 'ntc-autocomplete',
+        classActive: 'selected',
+        textDisplay: '',
     };
 
-    const init = (param) => {
-        const o = $.extend(
-            {
-                nameGrid: '',
-                mapDataSource: {},
-            },
-            param
+    const setGlobalSettings = (settings) => {
+        globalSettings.dataSource = settings.dataSourceMap;
+        globalSettings.arrayKeyName = settings.arrayKeyName;
+        globalSettings.idGrid = settings.idGrid;
+        globalSettings.textDisplay = settings.textDisplay;
+    };
+
+    const init = (settings) => {
+        setGlobalSettings(settings);
+        registerArrayNameInput(globalSettings.dataSource);
+        registerEventForInput(
+            globalSettings.arrayKeyName,
+            $(globalSettings.idGrid)
         );
-        globalObject.config = o;
-        registerArrayNameInput(o.mapDataSource);
-        registerEventInput();
-        registerEventKeyPress();
-    };
-
-    const getKendoGrid = (nameGrid) => {
-        const kendoGrid = $(nameGrid).data('kendoGrid');
-        return kendoGrid;
-    };
-
-    const getDataSourceItemRow = (grid) => {
-        return (row) => grid.dataItem(row);
-    };
-
-    const getBuildingAutoComplete = (container) => {
-        return (data) => {
-            const dataSource = data.dataSource;
-            const inputTarget = data.inputTarget;
-
-            container.html('');
-            $.each(dataSource, (index, object) => {
-                let $li = $('<li/>')
-                    .attr({
-                        'data-val': object.value,
-                        'data-input-name': $(inputTarget).attr('name'),
-                    })
-                    .append(`${object.text}`);
-                $li.css({
-                    padding: '5px 10px',
-                    cursor: 'pointer',
-                    'border-bottom': '1px solid',
-                    'border-bottom-color': 'currentcolor',
-                    'border-color': '#ccc6bd',
-                    color: '#4f4646',
-                    'text-overflow': 'ellipsis',
-                    'white-space': 'nowrap',
-                    overflow: 'hidden',
-                });
-
-                $li.on('mousedown', function () {
-                    const value = $(this).attr('data-val');
-                    const inputName = $(this).attr('data-input-name');
-                    const gridName = globalObject.config.nameGrid;
-                    const grid = $(gridName);
-                    const kendoGrid = getKendoGrid(gridName);
-
-                    grid.find(`input[name='${inputName}']`).val(value);
-                    const td = grid
-                        .find(`input[name='${inputName}']`)
-                        .closest('td');
-
-                    const row = td.closest('tr');
-                    const item = getDataSourceItemRow(kendoGrid)(row);
-
-                    item[inputName] = value;
-                    hiddenContainerAutoComplete();
-                });
-
-                $li.on('mouseover', function () {
-                    $(this)
-                        .closest('ul')
-                        .find('.ibank-active')
-                        .removeClass('ibank-active');
-                    $(this).addClass('ibank-active');
-                });
-                container.append($li);
-            });
-
-            return container;
-        };
-    };
-
-    const getContainerAutoComplete = (inputTarget) => {
-        const container = $('body').find('#grid-xyz-autocomplete');
-        return container.length > 0
-            ? container.removeClass('hidden').css({
-                  top:
-                      $(inputTarget).offset().top +
-                      $(inputTarget).height() * 2 -
-                      10,
-                  left: $(inputTarget).offset().left,
-              })
-            : $('<ul></ul>')
-                  .attr({ id: 'grid-xyz-autocomplete' })
-                  .css({
-                      'list-style': 'none',
-                      background: '#ffffff',
-                      padding: '5px',
-                      overflow: 'auto',
-                      height: '200px',
-                      width: `${$(inputTarget).width() + 200}px`,
-                      position: 'absolute',
-                      'margin-top': '5px',
-                      'border-radius': '5px',
-                      border: '1px solid #ccc',
-                      top:
-                          $(inputTarget).offset().top +
-                          $(inputTarget).height() * 2 -
-                          10,
-                      left: $(inputTarget).offset().left,
-                  });
-    };
-
-    const hiddenContainerAutoComplete = () => {
-        $('body').find('#grid-xyz-autocomplete').addClass('hidden');
-    };
-
-    const execAutoComplete = (data, inputTarget) => {
-        let $ul = getContainerAutoComplete(inputTarget);
-
-        const buildAutoComplete = getBuildingAutoComplete($ul);
-        const autoComplete = buildAutoComplete({
-            dataSource: data,
-            inputTarget: inputTarget,
-        });
-
-        $('body').append(autoComplete);
     };
 
     const registerArrayNameInput = (mapDataSource) => {
-        const arrayKeyName = Object.keys(mapDataSource);
-        globalObject.arrayKeyName = arrayKeyName;
+        globalSettings.arrayKeyName = Object.keys(mapDataSource);
+    };
+
+    const compose =
+        (...functions) =>
+        (args) =>
+            functions.reduceRight((arg, fn) => fn(arg), args);
+
+    const removeVietnamese = (str) => {
+        const strLowCase = str.toLowerCase();
+        const strA = strLowCase.replace(
+            /à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g,
+            'a'
+        );
+        const strE = strA.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+        const strI = strE.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+        const strO = strI.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+        const strU = strO.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+        const strY = strU.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+        const strD = strY.replace(/đ/g, 'd');
+        return strD;
+    };
+
+    const getOffset = (element) => {
+        if (!element.getClientRects().length) {
+            return { top: 0, left: 0 };
+        }
+
+        let rect = element.getBoundingClientRect();
+        let win = element.ownerDocument.defaultView;
+        return {
+            top: rect.top + win.pageYOffset,
+            left: rect.left + win.pageXOffset,
+        };
     };
 
     const debounce = (func, wait) => {
@@ -165,120 +90,262 @@ const autoCompleteGrid = (function () {
         };
     };
 
-    const registerEventInput = () => {
-        const arrayKeyName = globalObject.arrayKeyName;
-        const config = globalObject.config;
-        const nameGrid = config.nameGrid;
-        for (let i = 0; i < arrayKeyName.length; i++) {
-            $(nameGrid)
-                .off('keyup', `input[name='${arrayKeyName[i]}']`)
-                .on(
-                    'keyup',
-                    `input[name='${arrayKeyName[i]}']`,
-                    handleEventInput
-                );
+    const findIndex = (arrNode) => (node) => arrNode.indexOf(node);
 
-            $(nameGrid)
-                .off('blur', `input[name='${arrayKeyName[i]}']`)
-                .on('blur', `input[name='${arrayKeyName[i]}']`, function () {
-                    const gridName = globalObject.config.nameGrid;
-                    const grid = $(gridName);
-                    const kendoGrid = getKendoGrid(gridName);
-                    const container = $('body').find('#grid-xyz-autocomplete');
-                    const liActive = container.find('.ibank-active');
-                    const value =
-                        liActive.length > 0
-                            ? liActive.attr('data-val')
-                            : $(this).val();
-                    const inputName = $(this).attr('name');
+    const scrollTopEl = (position) => (element) =>
+        (element.scrollTop = position);
 
-                    const td = grid
-                        .find(`input[name='${arrayKeyName[i]}']`)
-                        .closest('td');
-
-                    const row = td.closest('tr');
-                    const item = getDataSourceItemRow(kendoGrid)(row);
-
-                    item[inputName] = value;
-                    hiddenContainerAutoComplete();
-                    const realTd = grid.find(td);
-                    const next = realTd.next();
-                    next.on('click');
-                });
-        }
+    const createNewContainer = () => {
+        const ul = document.createElement('ul');
+        ul.id = globalSettings.idContainer;
+        ul.setAttribute('class', globalSettings.classContainer);
+        return ul;
     };
 
-    const getScroll = (container) => {
-        return (itemActive) => {
-            const scrollTop = container.scrollTop();
-            const itemActiveHeight =
-                (itemActive && itemActive.outerHeight()) || 0;
-            const viewPortSize = scrollTop + container.height();
-            const indexItemActive = itemActive.index();
-            const itemOffset = itemActiveHeight * indexItemActive;
-            itemOffset < scrollTop ||
-            itemOffset + itemActiveHeight > viewPortSize
-                ? container.animate({ scrollTop: itemOffset }, 500)
-                : undefined;
+    const setPosition = (settings) => {
+        return (component) => {
+            component.style.top = `${settings.top}px`;
+            component.style.left = `${settings.left}px`;
+            return component;
         };
     };
 
-    const gotoUpList = (container) => {
-        const activeClass = 'ibank-active';
-        const scroll = getScroll(container);
-        const liActive = container.find(`.${activeClass}`);
-        const $liPrev =
-            liActive.length > 0 ? liActive.prev() : container.find('li:first');
+    const getContainerAutoComplete = () => {
+        const container = document.getElementById(globalSettings.idContainer);
+        const containerAutocomplete = container
+            ? container
+            : createNewContainer();
+        containerAutocomplete.innerHTML = '';
 
-        liActive.removeClass(activeClass);
-        $liPrev && $liPrev.addClass(activeClass);
-        $liPrev.length > 0 ? scroll($liPrev) : undefined;
+        return containerAutocomplete;
     };
 
-    const gotoDownList = (container) => {
-        const activeClass = 'ibank-active';
-        const scroll = getScroll(container);
-        const liActive = container.find(`.${activeClass}`);
-        const $liNext =
-            liActive.length > 0 ? liActive.next() : container.find('li:first');
-        liActive.removeClass(activeClass);
-        $liNext && $liNext.addClass(activeClass);
-        $liNext.length > 0 ? scroll($liNext) : undefined;
+    const setActive = (node) => {
+        node.classList.add(globalSettings.classActive);
+        return node;
     };
 
-    const registerEventKeyPress = () => {
-        $(document).on('keydown', function (e) {
-            const action = {
-                38: gotoUpList,
-                40: gotoDownList,
-            };
-            const container = $('body').find('#grid-xyz-autocomplete');
-            action[e.which]
-                ? action[e.which].apply(this, [container])
-                : undefined;
+    const removeAllActive = (container) => {
+        const liSelected =
+            container.querySelectorAll('li.selected')[0] || undefined;
+        liSelected && liSelected.classList.remove('selected');
+    };
+
+    const emptyContentNode = (node) => {
+        node.innerHTML = '';
+        return node;
+    };
+
+    const hiddenElNode = (node) => {
+        node.style.display = 'none';
+        return node;
+    };
+
+    const showElNode = (node) => {
+        node.style.display = 'block';
+        return node;
+    };
+
+    const lowerString = (string) => string.toLowerCase();
+
+    const findNodeActive = (arrNode) =>
+        arrNode.find((node) =>
+            node.classList.contains(globalSettings.classActive)
+        );
+
+    const handleMouseOverLiNode = (e) => {
+        const container = e.target.closest('ul');
+        removeAllActive(container);
+        setActive(e.target);
+    };
+
+    const getKendoGrid = ($grid) => $grid.data('kendoGrid');
+
+    const getDataSourceItemRow = (grid) => (row) => grid.dataItem(row);
+
+    const setValueToInput = (input) => (value) => {
+        input.value = value;
+        return input;
+    };
+
+    const updateDataSoureKendoGrid = (kendoGrid) => (input) => {
+        const item = getDataSourceItemRow(kendoGrid)(input.closest('tr'));
+        item[input.getAttribute('name')] = input.value;
+        kendoGrid.saveRow();
+        return input;
+    };
+
+    const handleMouseEnterLiNode = (inputTarget) => {
+        return (e) => {
+            const liNode = e.target;
+            setValueToInput(inputTarget)(getValueDislay(liNode));
+        };
+    };
+
+    const registerEventLi = (inputTarget) => {
+        return (liNode) => {
+            liNode.addEventListener('mouseover', handleMouseOverLiNode);
+            liNode.addEventListener(
+                'mouseenter',
+                handleMouseEnterLiNode(inputTarget)
+            );
+            return liNode;
+        };
+    };
+
+    const createLiNode = (object) => {
+        const liNode = document.createElement('li');
+        liNode.setAttribute('data-val', object.value);
+        const textNode = document.createTextNode(`${object.text}`);
+        liNode.appendChild(textNode);
+        return liNode;
+    };
+
+    const getBuilderContent = (inputTarget) => (dataSource) =>
+        dataSource.map((object) =>
+            registerEventLi(inputTarget)(createLiNode(object))
+        );
+
+    const appendToScreen = (container) => {
+        document.body.appendChild(container);
+        return container;
+    };
+
+    const appendToElement = (parent) => {
+        return (arrChild) => {
+            arrChild.map((childNode) => parent.appendChild(childNode));
+            return parent;
+        };
+    };
+
+    const getSearchEngine = (dataSource) => (keyword) =>
+        dataSource.filter((item) => item.text.includes(keyword));
+
+    const execEventKeyupInput = (e) => {
+        const el = e.target;
+        const keyword = removeVietnamese(lowerString(el.value));
+        const elHeight = el.clientHeight;
+        const nameInput = el.getAttribute('name');
+        const searchEngine = getSearchEngine(
+            globalSettings.dataSource[nameInput]
+        );
+        const offsetInput = getOffset(el);
+
+        const dataSourceFilter = searchEngine(keyword.trim());
+        const container = compose(
+            setPosition({
+                top: elHeight * 2 - 10 + offsetInput.top,
+                left: offsetInput.left,
+            }),
+            getContainerAutoComplete
+        );
+        const content = getBuilderContent(e.target)(dataSourceFilter);
+        const showSuggest = compose(
+            appendToScreen,
+            appendToElement(container())
+        );
+        showElNode(showSuggest(content));
+    };
+
+    const handelEventKeyup = debounce(function (e) {
+        const arrayArrowKey = [13, 38, 40];
+        !arrayArrowKey.includes(e.which) && execEventKeyupInput(e);
+        return false;
+    }, 500);
+
+    const getValueDislay = (node) =>
+        globalSettings.textDisplay === 'value'
+            ? node.getAttribute('data-val')
+            : node.textContent;
+
+    const handleEventBlur = (e) => {
+        const containerAutocomplete = document.getElementById(
+            globalSettings.idContainer
+        );
+        const saveDataSource = compose(updateDataSoureKendoGrid, getKendoGrid);
+        saveDataSource($(globalSettings.idGrid))(e.target);
+        hiddenElNode(emptyContentNode(containerAutocomplete));
+    };
+
+    const registerEventForInput = (arrKeyInputName, grid) => {
+        arrKeyInputName.forEach((inputName) => {
+            grid.off('keyup', `input[name="${inputName}"]`).on(
+                'keyup',
+                `input[name="${inputName}"]`,
+                handelEventKeyup
+            );
+            grid.off('blur', `input[name="${inputName}"]`).on(
+                'blur',
+                `input[name="${inputName}"]`,
+                handleEventBlur
+            );
+            grid.off('keydown', `input[name="${inputName}"]`).on(
+                'keydown',
+                `input[name="${inputName}"]`,
+                handleEventKeydown
+            );
         });
     };
 
-    const getSearchEngine = (dataSource) => {
-        return (keyword) =>
-            dataSource.filter((object) => object.text.includes(keyword));
+    const handleEventKeydown = (e) => {
+        const actions = {
+            38: gotoUp(e.target),
+            40: gotoDown(e.target),
+            13: () => {
+                handleEventBlur(e);
+            },
+        };
+
+        const container = document.getElementById(globalSettings.idContainer);
+        container && actions[e.which] && actions[e.which].call(this, container);
     };
 
-    const execEventInput = (e) => {
-        const keyword = $.trim($(e.target).val());
-        const config = globalObject.config;
-        const nameInput = $(e.target).attr('name');
-        const dataSource = config.mapDataSource[nameInput];
-        const searchEngine = getSearchEngine(dataSource);
-        const dataSourceSearch = searchEngine(keyword);
-        execAutoComplete(dataSourceSearch, $(e.target));
+    const gotoUp = (inputTarget) => {
+        return (container) => {
+            const arrNode = Array.from(container.querySelectorAll('li'));
+            const nodeActive = findNodeActive(arrNode) || arrNode[0];
+            const previousNode =
+                nodeActive.previousElementSibling || arrNode[0];
+            removeAllActive(container);
+            getScroll(container)(setActive(previousNode));
+            setValueToInput(inputTarget)(getValueDislay(previousNode));
+        };
     };
 
-    const handleEventInput = debounce(function (e) {
-        const arrayArrowKey = [38, 40];
-        !arrayArrowKey.includes(e.which) && execEventInput(e);
-    }, 500);
+    const gotoDown = (inputTarget) => {
+        return (container) => {
+            const arrNode = Array.from(container.querySelectorAll('li'));
+            const nodeActive = findNodeActive(arrNode);
+            const nextNode =
+                (nodeActive && nodeActive.nextElementSibling) || arrNode[0];
 
+            removeAllActive(container);
+            getScroll(container)(setActive(nextNode));
+            setValueToInput(inputTarget)(getValueDislay(nextNode));
+        };
+    };
+
+    const getScroll = (container) => {
+        return (nodeActive) => {
+            const scrollTopPosition = container.scrollTop;
+            const nodeActiveHeight = nodeActive.offsetHeight;
+            const viewPortSize = scrollTopPosition + container.offsetHeight;
+            const arrNode = Array.from(container.querySelectorAll('li'));
+            const indexNode = findIndex(arrNode)(nodeActive);
+            const arrNodeToActive = arrNode.slice(0, indexNode);
+            const totalOldHeigh = arrNodeToActive.reduce(
+                (totalHeight, currentNode) => {
+                    return totalHeight + currentNode.offsetHeight;
+                },
+                0
+            );
+            const nodeOffset = totalOldHeigh;
+
+            (nodeOffset < scrollTopPosition ||
+                nodeOffset + nodeActiveHeight > viewPortSize) &&
+                scrollTopEl(nodeOffset)(container);
+        };
+    };
     return {
         init: init,
     };
