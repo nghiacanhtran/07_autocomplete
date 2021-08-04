@@ -243,8 +243,8 @@ const autocompleteNtc = (function () {
         );
 
         global.ajax
-            ? global.ajax(keyword, execSearchAjax(e.target)(container()))
-            : execSearchNormal(e.target)(container)(keyword);
+            ? global.ajax(keyword.trim(), execSearchAjax(e.target)(container()))
+            : execSearchNormal(e.target)(container)(keyword.trim());
     };
 
     const handelEventKeyup = debounce(function (e) {
